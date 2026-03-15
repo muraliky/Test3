@@ -1,0 +1,23 @@
+{
+  "name": "selenium-playwright-migration",
+  "version": "2.0.0",
+  "description": "Hybrid Selenium to Playwright-BDD Migration (Node.js + Copilot Agent)",
+  "scripts": {
+    "migrate": "node scripts/migrate.js",
+    "migrate:status": "node scripts/migrate.js status",
+    "migrate:help": "node scripts/migrate.js help",
+    "bddgen": "npx bddgen",
+    "test": "npm run bddgen && npx playwright test",
+    "test:headed": "npm run bddgen && npx playwright test --headed",
+    "test:debug": "npm run bddgen && npx playwright test --debug",
+    "test:ui": "npm run bddgen && npx playwright test --ui",
+    "report": "npx playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "playwright-bdd": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

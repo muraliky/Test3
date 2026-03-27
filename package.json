@@ -1,0 +1,27 @@
+{
+  "name": "selenium-playwright-migration",
+  "version": "3.0.0",
+  "description": "Selenium to Playwright Migration with CoVe + Playwright MCP",
+  "scripts": {
+    "migrate": "node scripts/migrate.js",
+    "migrate:status": "node scripts/migrate.js status",
+    "migrate:help": "node scripts/migrate.js help",
+    "verify": "node scripts/verify.js",
+    "verify:file": "node scripts/verify.js file",
+    "verify:help": "node scripts/verify.js help",
+    "bddgen": "npx bddgen",
+    "test": "npm run bddgen && npx playwright test",
+    "test:headed": "npm run bddgen && npx playwright test --headed",
+    "test:debug": "npm run bddgen && npx playwright test --debug",
+    "test:ui": "npm run bddgen && npx playwright test --ui",
+    "report": "npx playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "playwright-bdd": "^7.0.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

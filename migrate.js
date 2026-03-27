@@ -507,7 +507,27 @@ function showStatus() {
   console.log('Steps:', p.totalSteps);
 }
 
+function showHelp() {
+  console.log(`
+Selenium to Playwright Migration Script
+
+Usage:
+  npm run migrate          - Run full migration (create skeletons)
+  npm run migrate:status   - Show migration status
+  npm run migrate:help     - Show this help
+
+This script:
+  1. Reads Java files from _source-java/
+  2. Converts locators to Playwright format
+  3. Creates TypeScript skeleton files with TODO markers
+  4. Generates pending-methods.json for tracking
+
+After running, use @pw-orchestrator to implement the TODO methods.
+`);
+}
+
 // CLI
 const cmd = process.argv[2];
 if (cmd === 'status') showStatus();
+else if (cmd === 'help') showHelp();
 else runMigration();

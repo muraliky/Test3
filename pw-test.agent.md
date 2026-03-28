@@ -1,11 +1,13 @@
 ---
 name: pw-test
-description: Run Playwright tests after migration. Supports headed, debug, and UI modes.
+description: Standalone helper to run Playwright tests.
 ---
 
-# TEST AGENT
+# TEST AGENT (Standalone Helper)
 
-Run tests after migration.
+Run Playwright tests.
+
+---
 
 ## ON "@pw-test"
 
@@ -13,17 +15,23 @@ Run tests after migration.
 npx bddgen && npx playwright test --reporter=list
 ```
 
+---
+
 ## ON "@pw-test headed"
 
 ```bash
 npx bddgen && npx playwright test --headed
 ```
 
+---
+
 ## ON "@pw-test debug"
 
 ```bash
 npx bddgen && npx playwright test --debug
 ```
+
+---
 
 ## ON "@pw-test <pattern>"
 
@@ -33,10 +41,6 @@ npx playwright test --grep "<pattern>"
 
 ---
 
-## RESULT
+## IF FAILURES
 
-```
-Total: 50 | Passed: 48 ✅ | Failed: 2 ❌
-
-Failures → @pw-debug
-```
+Use `@pw-debug` to fix.

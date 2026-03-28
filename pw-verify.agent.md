@@ -1,37 +1,41 @@
 ---
 name: pw-verify
-description: Run Chain of Verification (CoVe) on migrated files. Validates structure, implementation, and syntax.
+description: Standalone helper to run CoVe verification. Use to validate migrated files.
 ---
 
-# VERIFY AGENT - CoVe
+# VERIFY AGENT (Standalone Helper)
 
 Run verification checks on migrated files.
+
+---
 
 ## ON "@pw-verify"
 
 ```bash
-npm run verify
+node scripts/verify.js
 ```
 
-## ON "@pw-verify <file>"
+---
+
+## ON "@pw-verify <filepath>"
 
 ```bash
-npm run verify:file <filepath>
+node scripts/verify.js file <filepath>
 ```
 
 ---
 
 ## CoVe CHECKS
 
-1. **Structure** - Class export, constructor, imports, no Java syntax
-2. **Implementation** - No TODOs, async/await present
-3. **Count Match** - Locators/methods match source
-4. **Syntax** - Balanced braces/parens
+1. **Structure** - export class, constructor, imports
+2. **Implementation** - No throw new Error remaining
+3. **No Java** - No sendKeys, getText, isDisplayed
+4. **Syntax** - Balanced braces, await present
 
 ---
 
 ## OUTPUT
 
-- ✅ PASSED - File verified
-- ⚠️ PASSED with warnings - Minor issues
-- ❌ FAILED - Fix with `@pw-migrate <file>`
+- ✅ PASSED
+- ⚠️ PASSED with warnings
+- ❌ FAILED → Fix with `@pw-migrate <file>`

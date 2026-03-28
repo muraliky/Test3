@@ -1,55 +1,56 @@
 ---
 name: pw-debug
-description: Fix failing Playwright tests by analyzing errors and finding correct locators.
+description: Standalone helper to fix failing Playwright tests.
 ---
 
-# DEBUG AGENT
+# DEBUG AGENT (Standalone Helper)
 
 Fix failing tests.
 
-## ON "@pw-debug <error>"
-
-1. Parse error for file/line/locator
-2. Suggest fixes
-3. Apply fix
-4. Report: `✅ Fixed <file>:<line>`
+---
 
 ## ON "@pw-debug"
 
-```bash
-npx playwright test 2>&1 | head -50
-```
-
-Then fix first failure.
-
----
-
-## LOCATOR PRIORITY
-
-1. `getByRole('button', { name: 'X' })`
-2. `getByTestId('x')`
-3. `getByLabel('X')`
-4. `locator('#id')`
-5. `locator('.class')`
+1. Run tests: `npx playwright test 2>&1 | head -50`
+2. Parse failures
+3. Fix each issue
+4. Report fixes
 
 ---
 
 ## COMMON FIXES
 
-**Not Found:**
+### Not Found
 ```typescript
 // page.locator('#btn') →
 page.getByRole('button', { name: 'Submit' })
+page.getByTestId('submit-btn')
 ```
 
-**Multiple Elements:**
+### Multiple Elements
 ```typescript
 // page.locator('.btn') →
 page.locator('.btn').first()
 ```
 
-**Timeout:**
+### Timeout
 ```typescript
 await element.waitFor({ state: 'visible' });
 await element.click();
 ```
+
+---
+
+## LOCATOR PRIORITY
+
+1. `getByRole()` - Best
+2. `getByTestId()`
+3. `getByLabel()`
+4. `getByText()`
+5. `locator()` - Last resort
+
+---
+
+## AFTER FIXING
+
+Re-run: `@pw-test`

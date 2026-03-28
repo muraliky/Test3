@@ -65,13 +65,13 @@ setup.bat           # Windows
 
 ## Agents Overview
 
-| Agent | Phase | MCP | Purpose |
-|-------|-------|-----|---------|
-| `@pw-orchestrator` | 1 | ❌ | Master controller - migration + CoVe |
-| `@pw-migrate` | 1 | ❌ | Implement single file |
-| `@pw-verify` | 1 | ❌ | Run CoVe checks only |
-| `@pw-test` | 2 | ✅ | Run tests with live browser |
-| `@pw-debug` | 2 | ✅ | Fix failures using MCP browser |
+| Agent | Phase | Purpose |
+|-------|-------|---------|
+| `@pw-orchestrator` | 1 | Master controller - migration + CoVe |
+| `@pw-migrate` | 1 | Implement single file |
+| `@pw-verify` | 1 | Run CoVe checks only |
+| `@pw-test` | 2 | Run tests |
+| `@pw-debug` | 2 | Fix failing tests |
 
 ---
 
@@ -170,27 +170,7 @@ npm run verify:file <f>   # Verify single file
 
 ---
 
-## Phase 2: Test Execution + Debug (MCP)
-
-### Prerequisites: Playwright MCP Server
-
-**Option 1: VS Code Extension**
-```
-Install "Playwright MCP" extension
-```
-
-**Option 2: npx**
-```bash
-npx @anthropic-ai/mcp-server-playwright
-```
-
-**Option 3: Organization URL**
-```yaml
-# In agent file
-mcp_servers:
-  - type: url
-    url: https://playwright.mcp.your-org.com/sse
-```
+## Phase 2: Test Execution + Debug
 
 ### Run Tests
 ```
@@ -208,14 +188,45 @@ mcp_servers:
 @pw-debug
 ```
 
-**What it does with MCP:**
+**What it does:**
 1. Parses error message for file/locator
-2. Navigates to the actual page in browser
-3. Inspects DOM to find correct elements
+2. Analyzes the failure reason
+3. Finds correct selector (using Playwright Inspector or codegen)
 4. Updates files with fixes
 5. Re-runs tests to verify
 
-### MCP Browser Commands
+### Debugging Tools
+
+**Playwright Inspector:**
+```bash
+npx playwright test --debug
+```
+
+**Codegen (to find selectors):**
+```bash
+npx playwright codegen https://your-app.com
+```
+
+**HTML Report:**
+```bash
+npm run report
+```
+
+### Optional: Playwright MCP Server
+
+For live browser debugging with AI assistance:
+
+**Option 1: VS Code Extension**
+```
+Install "Playwright MCP" extension
+```
+
+**Option 2: npx**
+```bash
+npx @anthropic-ai/mcp-server-playwright
+```
+
+### MCP Browser Commands (If Available)
 
 ```javascript
 // Navigate to page
@@ -381,13 +392,13 @@ npm run report            # Show HTML report
 
 ## Summary
 
-| Phase | Tool | Purpose | MCP Required |
-|-------|------|---------|--------------|
-| 1 | `npm run migrate` | Create skeletons | ❌ |
-| 1 | `@pw-orchestrator` | Implement files | ❌ |
-| 1 | `npm run verify` | CoVe validation | ❌ |
-| 2 | `@pw-test` | Run tests | ✅ |
-| 2 | `@pw-debug` | Fix failures | ✅ |
+| Phase | Tool | Purpose |
+|-------|------|---------|
+| 1 | `npm run migrate` | Create skeletons |
+| 1 | `@pw-orchestrator` | Implement files |
+| 1 | `npm run verify` | CoVe validation |
+| 2 | `@pw-test` | Run tests |
+| 2 | `@pw-debug` | Fix failures |
 
 **Workflow:**
 ```

@@ -491,8 +491,23 @@ function runMigration() {
   console.log(`   Files Created:   ${totalFiles}`);
   console.log(`   ├─ Pages:        ${pending.pageFiles.length} (${pending.totalMethods} methods)`);
   console.log(`   └─ Steps:        ${pending.stepFiles.length} (${pending.totalSteps} steps)`);
-  console.log('\n   Next: Initialize work queue');
-  console.log('         node scripts/queue.js init');
+  console.log('');
+  console.log('   Files to migrate:');
+  pending.pageFiles.slice(0, 5).forEach((f, i) => {
+    const methods = pending.pages[f]?.length || 0;
+    console.log(`     ${i + 1}. ${f} (${methods} methods)`);
+  });
+  if (pending.pageFiles.length > 5) {
+    console.log(`     ... and ${pending.pageFiles.length - 5} more`);
+  }
+  console.log('');
+  console.log('   Next Steps (ONE FILE, ONE METHOD at a time):');
+  console.log('     1. Pick a file:   @pw-orchestrator migrate <filename>');
+  console.log('     2. Pick a method: @pw-migrate <file> <method>');
+  console.log('     3. Verify file:   @pw-verify <file>');
+  console.log('');
+  console.log('   Or start guided migration:');
+  console.log('     @pw-orchestrator start');
   console.log('\n═══════════════════════════════════════════════════════════════\n');
 }
 
@@ -502,9 +517,31 @@ function showStatus() {
     return;
   }
   const p = JSON.parse(fs.readFileSync(CONFIG.pendingFile, 'utf-8'));
-  console.log('\nPending files:', p.pageFiles.length + p.stepFiles.length);
-  console.log('Methods:', p.totalMethods);
-  console.log('Steps:', p.totalSteps);
+  
+  console.log('\n═══════════════════════════════════════════════════════════════');
+  console.log('                    MIGRATION STATUS');
+  console.log('═══════════════════════════════════════════════════════════════\n');
+  
+  console.log('   PAGE FILES:');
+  p.pageFiles.forEach((file, i) => {
+    const methods = p.pages[file] || [];
+    console.log(`     ${i + 1}. ${file}`);
+    methods.forEach(m => console.log(`        • ${m}`));
+  });
+  
+  console.log('\n   STEP FILES:');
+  p.stepFiles.forEach((file, i) => {
+    const steps = p.steps[file] || [];
+    console.log(`     ${i + 1}. ${file}`);
+    steps.slice(0, 3).forEach(s => console.log(`        • ${s.substring(0, 50)}...`));
+    if (steps.length > 3) console.log(`        ... and ${steps.length - 3} more`);
+  });
+  
+  console.log('\n   TOTALS:');
+  console.log(`     Files:   ${p.pageFiles.length + p.stepFiles.length}`);
+  console.log(`     Methods: ${p.totalMethods}`);
+  console.log(`     Steps:   ${p.totalSteps}`);
+  console.log('\n═══════════════════════════════════════════════════════════════\n');
 }
 
 function showHelp() {

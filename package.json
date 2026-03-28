@@ -1,30 +1,18 @@
 {
   "name": "selenium-playwright-migration",
   "version": "3.0.0",
-  "description": "Selenium to Playwright Migration Toolkit with Queue Management",
+  "description": "Selenium to Playwright Migration Toolkit",
   "scripts": {
     "migrate": "node scripts/migrate.js",
     "migrate:status": "node scripts/migrate.js status",
-    "migrate:help": "node scripts/migrate.js help",
-    
-    "queue:init": "node scripts/queue.js init",
-    "queue:status": "node scripts/queue.js status",
-    "queue:next": "node scripts/queue.js next",
-    "queue:done": "node scripts/queue.js done",
-    "queue:fail": "node scripts/queue.js fail",
-    "queue:list": "node scripts/queue.js list",
-    "queue:reset": "node scripts/queue.js reset",
-    "queue:help": "node scripts/queue.js help",
     
     "verify": "node scripts/verify.js",
     "verify:file": "node scripts/verify.js file",
-    "verify:help": "node scripts/verify.js help",
     
     "bddgen": "npx bddgen",
     "test": "npm run bddgen && npx playwright test",
     "test:headed": "npm run bddgen && npx playwright test --headed",
     "test:debug": "npm run bddgen && npx playwright test --debug",
-    "test:ui": "npm run bddgen && npx playwright test --ui",
     "report": "npx playwright show-report"
   },
   "devDependencies": {

@@ -1,21 +1,15 @@
 ---
 name: pw-test
-description: Standalone helper to run Playwright tests.
+description: Run Playwright tests.
 ---
 
-# TEST AGENT (Standalone Helper)
-
-Run Playwright tests.
-
----
+# TEST AGENT
 
 ## ON "@pw-test"
 
 ```bash
-npx bddgen && npx playwright test --reporter=list
+npx bddgen && npx playwright test
 ```
-
----
 
 ## ON "@pw-test headed"
 
@@ -23,24 +17,8 @@ npx bddgen && npx playwright test --reporter=list
 npx bddgen && npx playwright test --headed
 ```
 
----
-
 ## ON "@pw-test debug"
 
 ```bash
 npx bddgen && npx playwright test --debug
 ```
-
----
-
-## ON "@pw-test <pattern>"
-
-```bash
-npx playwright test --grep "<pattern>"
-```
-
----
-
-## IF FAILURES
-
-Use `@pw-debug` to fix.

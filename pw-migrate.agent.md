@@ -1,27 +1,19 @@
 ---
 name: pw-migrate
-description: Standalone helper to re-convert a single file. Use when orchestrator fails on a file or manual fix needed.
+description: Convert a single file. Use when you need to re-convert or fix a specific file.
 ---
 
-# MIGRATE AGENT (Standalone Helper)
+# MIGRATE AGENT
 
-Re-convert a single file. Use when:
-- Orchestrator failed on a file
-- Verification found issues
-- Manual fix needed
-
----
+Convert a single file.
 
 ## ON "@pw-migrate <filepath>"
 
-1. Read the file
+1. Read: `cat <filepath>`
 2. Find `throw new Error` methods
-3. Convert each using rules below
+3. Convert each method
 4. Save file
-5. Update queue: `node scripts/queue.js done <filename>`
-6. Report: `✅ <file> converted`
-
----
+5. Report: `✅ <file> converted`
 
 ## CONVERSION RULES
 
@@ -34,10 +26,3 @@ Re-convert a single file. Use when:
 | `element.isDisplayed()` | `await this.element.isVisible()` |
 | `driver.get(url)` | `await this.page.goto(url)` |
 | `Thread.sleep(ms)` | `await this.page.waitForTimeout(ms)` |
-
-| Java | TypeScript |
-|------|------------|
-| `for (Type x : list)` | `for (const x of list)` |
-| `String s = "x"` | `const s = "x"` |
-| `list.size()` | `list.length` |
-| `str.equals(x)` | `str === x` |

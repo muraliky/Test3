@@ -57,6 +57,18 @@ function getAllFiles(dir, ext) {
   return results;
 }
 
+/**
+ * Format method name into readable description
+ */
+function formatMethodDescription(methodName) {
+  // Convert camelCase to words
+  const words = methodName
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, str => str.toUpperCase())
+    .trim();
+  return words;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // LOCATOR CONVERSION
 // ═══════════════════════════════════════════════════════════════
@@ -202,14 +214,25 @@ export class ${parsed.className} {
   readonly page: Page;
 `;
 
-  // Locators
+  // Locators with proper JSDoc
   for (const loc of parsed.locators) {
-    out += `  /** @original ${loc.original} */\n`;
-    out += `  readonly ${loc.name}: Locator;\n`;
+    out += `  /**
+   * ${loc.name} locator
+   * @type {Locator}
+   */
+  readonly ${loc.name}: Locator;
+`;
   }
 
   // Constructor
-  out += `\n  constructor(page: Page) {\n    this.page = page;\n`;
+  out += `
+  /**
+   * Creates an instance of ${parsed.className}
+   * @param {Page} page - Playwright page object
+   */
+  constructor(page: Page) {
+    this.page = page;
+`;
   for (const loc of parsed.locators) {
     out += `    this.${loc.name} = page.${loc.converted};\n`;
   }
@@ -220,16 +243,16 @@ export class ${parsed.className} {
     methods.push(method.name);
     const tp = convertParams(method.params);
     const ret = javaToTsType(method.returnType);
-    const bodyLines = method.body.split('\n').map(l => `   *   ${l.trim()}`).join('\n');
 
     out += `
   /**
-   * ${method.name}
-   * @original-java
-${bodyLines}
+   * ${formatMethodDescription(method.name)}
 ${tp.docs ? tp.docs + '\n' : ''}   * @returns {Promise<${ret}>}
    */
   async ${method.name}(${tp.params}): Promise<${ret}> {
+    // TODO: Implement this method
+    // Original Java:
+    // ${method.body.split('\n').map(l => l.trim()).filter(l => l).join('\n    // ')}
     throw new Error('Method ${method.name} not implemented');
   }
 `;
@@ -287,7 +310,6 @@ import { Given, When, Then, expect } from './fixtures';
   for (const step of parsed.steps) {
     steps.push(step.stepText);
     const tp = convertParams(step.params);
-    const bodyLines = step.body.split('\n').map(l => ` *   ${l.trim()}`).join('\n');
 
     // Detect fixtures needed
     const fixtures = ['page'];
@@ -298,11 +320,13 @@ import { Given, When, Then, expect } from './fixtures';
     });
 
     out += `/**
- * @step ${step.annotation}: ${step.stepText}
- * @original-java
-${bodyLines}
+ * ${step.annotation}: ${step.stepText}
+${tp.params ? ` * @param {object} fixtures - Test fixtures\n` : ''}${tp.docs ? tp.docs : ''}
  */
 ${step.annotation}('${step.stepText}', async ({ ${fixtures.join(', ')} }${tp.params ? `, ${tp.params}` : ''}) => {
+  // TODO: Implement this step
+  // Original Java:
+  // ${step.body.split('\n').map(l => l.trim()).filter(l => l).join('\n  // ')}
   throw new Error('Step not implemented');
 });
 

@@ -9,10 +9,15 @@
     "verify": "node scripts/verify.js",
     "verify:file": "node scripts/verify.js file",
     
+    "auth:setup": "node scripts/auth-setup.js interactive",
+    "auth:setup:headless": "node scripts/auth-setup.js headless",
+    "auth:check": "node scripts/auth-setup.js check",
+    "auth:clear": "node scripts/auth-setup.js clear",
+    
     "bddgen": "npx bddgen",
-    "test": "npm run bddgen && npx playwright test",
-    "test:headed": "npm run bddgen && npx playwright test --headed",
-    "test:debug": "npm run bddgen && npx playwright test --debug",
+    "test": "npm run bddgen && npx playwright test --project=desktop-chrome",
+    "test:headed": "npm run bddgen && npx playwright test --project=desktop-chrome --headed",
+    "test:debug": "npm run bddgen && npx playwright test --project=desktop-chrome --debug",
     "report": "npx playwright show-report"
   },
   "devDependencies": {

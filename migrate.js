@@ -294,16 +294,26 @@ function parseJavaSteps(content, fileName) {
 // GENERATE SKELETON STEPS
 // ═══════════════════════════════════════════════════════════════
 
-function generateSkeletonSteps(parsed, javaFile) {
+function generateSkeletonSteps(parsed, javaFile, relativeDir) {
   const kebab = toKebabCase(parsed.className.replace(/Steps?$/, ''));
   const steps = [];
+
+  // Calculate relative path to fixtures based on nesting level
+  // fixtures.ts is always in src/steps/
+  // If step file is in src/steps/subfolder/, we need '../fixtures'
+  // If step file is in src/steps/sub/folder/, we need '../../fixtures'
+  let fixturesImport = './fixtures';
+  if (relativeDir && relativeDir !== '' && relativeDir !== '.') {
+    const depth = relativeDir.split(/[/\\]/).filter(p => p).length;
+    fixturesImport = '../'.repeat(depth) + 'fixtures';
+  }
 
   let out = `/**
  * @fileoverview ${parsed.className}
  * @source ${javaFile}
  */
 
-import { Given, When, Then, expect } from './fixtures';
+import { Given, When, Then, expect } from '${fixturesImport}';
 
 `;
 
@@ -348,7 +358,14 @@ function generateFixtures() {
     const fn = path.basename(pf, '.page.ts');
     const cn = fn.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('') + 'Page';
     const fix = toCamelCase(cn);
-    imports += `import { ${cn} } from '../pages/${fn}.page';\n`;
+    
+    // Calculate relative path from src/steps/ to the page file
+    // fixtures.ts is in src/steps/
+    // pages could be in src/pages/ or src/pages/subfolder/
+    const relPath = path.relative(CONFIG.pagesOut, pf);
+    const importPath = '../pages/' + relPath.replace(/\\/g, '/').replace('.ts', '');
+    
+    imports += `import { ${cn} } from '${importPath}';\n`;
     types += `  ${fix}: ${cn};\n`;
     impl += `  ${fix}: async ({ page }, use) => { await use(new ${cn}(page)); },\n`;
   }
@@ -446,9 +463,12 @@ function migrateSteps() {
     try {
       const content = fs.readFileSync(file, 'utf-8');
       const parsed = parseJavaSteps(content, path.basename(file));
-      const result = generateSkeletonSteps(parsed, file);
       
+      // Calculate relative directory for this step file
       const rel = path.relative(stepsDir, path.dirname(file));
+      
+      const result = generateSkeletonSteps(parsed, file, rel);
+      
       const outDir = path.join(CONFIG.stepsOut, rel);
       ensureDir(outDir);
       

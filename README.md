@@ -22,11 +22,12 @@ Migrate Selenium + Java + QAF + Cucumber to Playwright + TypeScript + playwright
 │  @pw-orchestrator start                                         │
 │        │                                                        │
 │        ├── Generate skeletons (node scripts/migrate.js)         │
+│        │   └── AND/BUT in features → converted to Given/When/Then│
 │        ├── Convert each file (one by one, method by method)     │
 │        └── Run verification                                     │
 │                                                                 │
 ├─────────────────────────────────────────────────────────────────┤
-│  PHASE 2: EXECUTION & FIXING                                    │
+│  PHASE 2: EXECUTION & DEBUGGING                                 │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  npm run auth:setup  (login once, save session)                 │
@@ -34,16 +35,25 @@ Migrate Selenium + Java + QAF + Cucumber to Playwright + TypeScript + playwright
 │        ▼                                                        │
 │  auth.json (cookies/session - NO credentials)                   │
 │        │                                                        │
-│        ├──────────────────┬─────────────────────┐               │
-│        ▼                  ▼                     ▼               │
-│  @pw-test           Playwright MCP        All Tests             │
-│  (uses auth.json)   (uses auth.json)     (use auth.json)        │
-│        │                  │                                     │
-│        │            ❌ Never sees                               │
-│        │               credentials                              │
-│        │                                                        │
 │        ▼                                                        │
-│  Desktop Chrome (already logged in)                             │
+│  npm test  (YOU run this manually)                              │
+│        │                                                        │
+│        ├── Uses auth.json (already logged in)                   │
+│        ├── Uses Desktop Chrome (channel: 'chrome')              │
+│        │                                                        │
+│  ┌─────┴─────┐                                                  │
+│  │           │                                                  │
+│  PASS ✅   FAIL ❌                                               │
+│              │                                                  │
+│              ▼                                                  │
+│        @pw-debug                                                │
+│              │                                                  │
+│              ▼                                                  │
+│        Playwright MCP Server                                    │
+│        (uses auth.json - never sees credentials)                │
+│              │                                                  │
+│              ▼                                                  │
+│        Desktop Chrome (inspect, find locators, fix)             │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -67,7 +77,7 @@ cp -r /your/project/features/*.feature _source-java/features/
 @pw-orchestrator start
 ```
 
-### Phase 2: Execution & Fixing
+### Phase 2: Execution & Debugging
 
 ```bash
 # 1. Setup authentication (REQUIRED - do this first!)
@@ -76,10 +86,10 @@ npm run auth:setup
 
 # 2. Setup Playwright MCP (see docs/PLAYWRIGHT_MCP_SETUP.md)
 
-# 3. Run tests
-@pw-test
+# 3. Run tests (you run this manually)
+npm test
 
-# 4. Fix failures (uses Playwright MCP)
+# 4. Debug failures (uses Playwright MCP)
 @pw-debug
 ```
 
@@ -119,8 +129,9 @@ See `docs/AUTHENTICATION.md` for full details.
 | `@pw-orchestrator` | 1 | Migration - converts files one by one |
 | `@pw-migrate` | 1 | Re-convert single file |
 | `@pw-verify` | 1 | Run CoVe verification |
-| `@pw-test` | 2 | Run tests on Desktop Chrome |
-| `@pw-debug` | 2 | Fix failures using Playwright MCP |
+| `@pw-debug` | 2 | Debug failures using Playwright MCP |
+
+**Note:** Run tests manually with `npm test`. Use `@pw-debug` only for debugging failures.
 
 ---
 

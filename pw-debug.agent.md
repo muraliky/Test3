@@ -1,13 +1,13 @@
 ---
 name: pw-debug
-description: Fix failing Playwright tests using Playwright MCP Server to interact with Desktop Chrome. Uses saved auth state - never sees credentials.
+description: Debug failing Playwright tests using Playwright MCP Server. Inspects pages, finds correct locators, fixes code.
 tools:
   - playwright
 ---
 
 # DEBUG AGENT (with Playwright MCP)
 
-Fix failing tests by interacting with Desktop Chrome via Playwright MCP Server.
+Debug failing tests by interacting with Desktop Chrome via Playwright MCP Server.
 
 **SECURITY:** MCP uses saved auth state (auth.json). It never sees your credentials.
 
@@ -15,32 +15,27 @@ Fix failing tests by interacting with Desktop Chrome via Playwright MCP Server.
 
 ## PREREQUISITES
 
-1. **Auth state must exist:**
+1. **Run tests first (user runs manually):**
+   ```bash
+   npm test
+   ```
+
+2. **Auth state must exist:**
    ```bash
    npm run auth:check
    # If not found:
    npm run auth:setup
    ```
 
-2. **Playwright MCP configured:** See `docs/PLAYWRIGHT_MCP_SETUP.md`
+3. **Playwright MCP configured:** See `docs/PLAYWRIGHT_MCP_SETUP.md`
 
 ---
 
 ## ON "@pw-debug"
 
-### Step 0: Verify Auth State
-
-```bash
-npm run auth:check
-```
-
-If auth state is missing or expired, tell user to run:
-```bash
-npm run auth:setup
-```
-
 ### Step 1: Get Test Failures
 
+Ask user for test output or run:
 ```bash
 npx playwright test --project=desktop-chrome --reporter=list 2>&1 | head -100
 ```

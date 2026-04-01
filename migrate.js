@@ -271,22 +271,111 @@ function parseJavaSteps(content, fileName) {
   const cm = content.match(/public\s+class\s+(\w+)/);
   result.className = cm ? cm[1] : fileName.replace('.java', '');
 
-  const stepRe = /@(Given|When|Then|And|But)\s*\(\s*["']([^'"]+)["']\s*\)\s*public\s+void\s+(\w+)\s*\(([^)]*)\)\s*(?:throws\s+\w+)?\s*\{([\s\S]*?)\n\s{0,4}\}/g;
-  let m;
-  while ((m = stepRe.exec(content))) {
-    let [, ann, text, name, params, body] = m;
-    // Convert And/But
-    if (ann === 'And' || ann === 'But') {
-      const lower = text.toLowerCase();
-      if (lower.includes('click') || lower.includes('enter') || lower.includes('select') || lower.includes('type'))
-        ann = 'When';
-      else if (lower.includes('should') || lower.includes('verify') || lower.includes('see') || lower.includes('displayed'))
-        ann = 'Then';
-      else
-        ann = 'Given';
+  // Multiple patterns to catch different step definition styles
+  const patterns = [
+    // Pattern 1: Standard - @Given("text") public void method()
+    /@(Given|When|Then|And|But)\s*\(\s*["'](.+?)["']\s*\)\s*(?:public\s+)?(?:void\s+)?(\w+)\s*\(([^)]*)\)\s*(?:throws\s+[\w,\s]+)?\s*\{([\s\S]*?)\n\s{0,4}\}/g,
+    
+    // Pattern 2: With value attribute - @Given(value = "text")
+    /@(Given|When|Then|And|But)\s*\(\s*value\s*=\s*["'](.+?)["']\s*\)\s*(?:public\s+)?(?:void\s+)?(\w+)\s*\(([^)]*)\)\s*(?:throws\s+[\w,\s]+)?\s*\{([\s\S]*?)\n\s{0,4}\}/g,
+    
+    // Pattern 3: Multiline annotation
+    /@(Given|When|Then|And|But)\s*\(\s*["']([\s\S]*?)["']\s*\)\s*(?:public\s+)?(?:void\s+)?(\w+)\s*\(([^)]*)\)\s*(?:throws\s+[\w,\s]+)?\s*\{([\s\S]*?)\n\s{0,4}\}/g,
+  ];
+
+  const foundSteps = new Set(); // Track unique steps by text
+  
+  for (const stepRe of patterns) {
+    let m;
+    while ((m = stepRe.exec(content))) {
+      let [, ann, text, name, params, body] = m;
+      
+      // Clean up text (remove newlines, extra spaces)
+      text = text.replace(/\s+/g, ' ').trim();
+      
+      // Skip if already found
+      if (foundSteps.has(text)) continue;
+      foundSteps.add(text);
+      
+      // Convert And/But to Given/When/Then
+      if (ann === 'And' || ann === 'But') {
+        const lower = text.toLowerCase();
+        if (lower.includes('click') || lower.includes('enter') || lower.includes('select') || 
+            lower.includes('type') || lower.includes('input') || lower.includes('fill') ||
+            lower.includes('submit') || lower.includes('press') || lower.includes('navigate')) {
+          ann = 'When';
+        } else if (lower.includes('should') || lower.includes('verify') || lower.includes('see') || 
+                   lower.includes('displayed') || lower.includes('visible') || lower.includes('assert') ||
+                   lower.includes('error') || lower.includes('message') || lower.includes('contains')) {
+          ann = 'Then';
+        } else {
+          ann = 'Given';
+        }
+      }
+      
+      result.steps.push({ 
+        annotation: ann, 
+        stepText: text, 
+        methodName: name, 
+        params: params.trim(), 
+        body: body ? body.trim() : '' 
+      });
     }
-    result.steps.push({ annotation: ann, stepText: text, methodName: name, params: params.trim(), body: body.trim() });
   }
+  
+  // Also try to find steps using a simpler line-by-line approach
+  const lines = content.split('\n');
+  let currentAnnotation = null;
+  let currentText = null;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // Look for annotation line
+    const annMatch = line.match(/@(Given|When|Then|And|But)\s*\(\s*["'](.+?)["']\s*\)/);
+    if (annMatch) {
+      const [, ann, text] = annMatch;
+      if (!foundSteps.has(text)) {
+        currentAnnotation = ann;
+        currentText = text;
+      }
+      continue;
+    }
+    
+    // Look for method following annotation
+    if (currentAnnotation && currentText) {
+      const methodMatch = line.match(/(?:public\s+)?(?:void\s+)?(\w+)\s*\(([^)]*)\)/);
+      if (methodMatch) {
+        const [, name, params] = methodMatch;
+        if (!foundSteps.has(currentText)) {
+          foundSteps.add(currentText);
+          
+          let ann = currentAnnotation;
+          if (ann === 'And' || ann === 'But') {
+            const lower = currentText.toLowerCase();
+            if (lower.includes('click') || lower.includes('enter') || lower.includes('navigate')) {
+              ann = 'When';
+            } else if (lower.includes('should') || lower.includes('verify') || lower.includes('see')) {
+              ann = 'Then';
+            } else {
+              ann = 'Given';
+            }
+          }
+          
+          result.steps.push({
+            annotation: ann,
+            stepText: currentText,
+            methodName: name,
+            params: params.trim(),
+            body: ''
+          });
+        }
+        currentAnnotation = null;
+        currentText = null;
+      }
+    }
+  }
+  
   return result;
 }
 
@@ -488,7 +577,7 @@ function migrateSteps() {
 }
 
 function copyFeatures() {
-  console.log('\n📋 Copying Features...\n');
+  console.log('\n📋 Processing Features...\n');
   const featDir = path.join(CONFIG.sourceDir, 'features');
   const files = getAllFiles(featDir, '.feature');
   if (!files.length) { console.log('   No feature files found'); return; }
@@ -498,9 +587,71 @@ function copyFeatures() {
     const rel = path.relative(featDir, file);
     const out = path.join(CONFIG.featuresOut, rel);
     ensureDir(path.dirname(out));
-    fs.copyFileSync(file, out);
-    console.log(`   ✅ ${path.basename(file)}`);
+    
+    // Read and convert AND/BUT to Given/When/Then
+    let content = fs.readFileSync(file, 'utf-8');
+    content = convertAndButKeywords(content);
+    
+    fs.writeFileSync(out, content);
+    console.log(`   ✅ ${path.basename(file)} (AND/BUT converted)`);
   }
+}
+
+/**
+ * Convert AND/BUT keywords to Given/When/Then based on step text content
+ * Uses SAME logic as step definition conversion for consistency
+ * playwright-bdd matches by TEXT only, keyword doesn't matter for matching
+ */
+function convertAndButKeywords(content) {
+  const lines = content.split('\n');
+  const result = [];
+  
+  for (let line of lines) {
+    const trimmed = line.trim();
+    
+    // Keep Given/When/Then as-is
+    if (/^\s*(Given|When|Then)\s+/.test(line)) {
+      result.push(line);
+    }
+    // Convert And/But based on step text content (same logic as step definitions)
+    else if (/^\s*(And|But)\s+/.test(line)) {
+      const indent = line.match(/^(\s*)/)[1];
+      const stepText = trimmed.replace(/^(And|But)\s+/, '');
+      const lower = stepText.toLowerCase();
+      
+      let newKeyword;
+      // Action words → When
+      if (lower.includes('click') || lower.includes('enter') || lower.includes('select') || 
+          lower.includes('type') || lower.includes('input') || lower.includes('fill') ||
+          lower.includes('submit') || lower.includes('press') || lower.includes('navigate') ||
+          lower.includes('scroll') || lower.includes('drag') || lower.includes('drop') ||
+          lower.includes('upload') || lower.includes('download') || lower.includes('open') ||
+          lower.includes('close') || lower.includes('switch') || lower.includes('choose')) {
+        newKeyword = 'When';
+      }
+      // Assertion words → Then
+      else if (lower.includes('should') || lower.includes('verify') || lower.includes('see') || 
+               lower.includes('displayed') || lower.includes('visible') || lower.includes('assert') ||
+               lower.includes('error') || lower.includes('message') || lower.includes('contains') ||
+               lower.includes('exist') || lower.includes('present') || lower.includes('show') ||
+               lower.includes('appear') || lower.includes('match') || lower.includes('equal') ||
+               lower.includes('have') || lower.includes('expect') || lower.includes('confirm')) {
+        newKeyword = 'Then';
+      }
+      // Setup/context words → Given
+      else {
+        newKeyword = 'Given';
+      }
+      
+      result.push(`${indent}${newKeyword} ${stepText}`);
+    }
+    // Keep other lines as-is
+    else {
+      result.push(line);
+    }
+  }
+  
+  return result.join('\n');
 }
 
 function generateSupport() {

@@ -1,6 +1,6 @@
 ---
 name: pw-orchestrator
-description: Selenium to Playwright migration. Converts ONE file at a time, ONE method at a time. No deviation.
+description: Selenium to Playwright migration. Converts ONE file at a time, ONE method at a time. Runs CoVe after EACH file - must pass before moving on.
 ---
 
 # ORCHESTRATOR AGENT
@@ -9,9 +9,10 @@ description: Selenium to Playwright migration. Converts ONE file at a time, ONE 
 
 1. **ONE FILE AT A TIME** - Never work on multiple files simultaneously
 2. **ONE METHOD AT A TIME** - Convert each method individually, show before/after
-3. **COMPLETE FILE BEFORE NEXT** - Finish ALL methods in current file before moving to next
-4. **NO SKIPPING** - Process every method, every file
-5. **SAVE AFTER EACH FILE** - Write file only after all its methods are done
+3. **CoVe AFTER EACH FILE** - Run verification immediately after converting each file
+4. **FIX BEFORE NEXT** - If CoVe fails, FIX the file until it passes. DO NOT move to next file.
+5. **NO SKIPPING** - Process every method, every file
+6. **SAVE AFTER EACH FILE** - Write file only after all its methods are done
 
 ---
 
@@ -65,7 +66,7 @@ Go to **FILE PROCESSING** section below with that file.
 
 ## FILE PROCESSING
 
-**DO THIS FOR ONE FILE ONLY. DO NOT PROCEED TO NEXT FILE UNTIL COMPLETE.**
+**DO THIS FOR ONE FILE ONLY. DO NOT PROCEED TO NEXT FILE UNTIL CoVe PASSES.**
 
 ### Step A: Announce File
 
@@ -79,9 +80,11 @@ Go to **FILE PROCESSING** section below with that file.
 
 ```bash
 cat src/pages/<filename>
+# or
+cat src/steps/<filename>
 ```
 
-### Step C: List All Methods
+### Step C: List All Methods/Steps
 
 Find all methods with `throw new Error('Method ... not implemented')` or `throw new Error('Step not implemented')`.
 
@@ -118,63 +121,108 @@ Look for the `// Original Java:` comment block above the throw statement.
    ✅ Method 1 done
 ```
 
-**IMPORTANT:** After converting, remove the `// TODO:` and `// Original Java:` comments. The final method should be clean:
+**IMPORTANT:** After converting, remove the `// TODO:` and `// Original Java:` comments. The final method should be clean.
 
-```typescript
-/**
- * Login
- * @param {string} username - The username
- * @param {string} password - The password
- * @returns {Promise<void>}
- */
-async login(username: string, password: string): Promise<void> {
-  await this.usernameInput.clear();
-  await this.usernameInput.fill(username);
-  await this.passwordInput.fill(password);
-  await this.loginButton.click();
-}
-```
+### Step E: Convert Remaining Methods
 
-### Step E: Convert Method 2
-
-```
-   ─────────────────────────────────────────
-   METHOD [2/4]: enterUsername(username)
-   ─────────────────────────────────────────
-
-   ORIGINAL JAVA:
-   usernameInput.clear();
-   usernameInput.sendKeys(username);
-
-   CONVERTED TYPESCRIPT:
-   await this.usernameInput.clear();
-   await this.usernameInput.fill(username);
-
-   ✅ Method 2 done
-```
-
-### Step F: Continue Until All Methods Done
-
-Repeat for Method 3, Method 4, etc.
+Repeat for Method 2, 3, 4, etc.
 
 **DO NOT SKIP ANY METHOD.**
 
-### Step G: Save Complete File
+### Step F: Save Complete File
 
 After ALL methods are converted, save the file with all changes.
 
-### Step H: Update Progress
+---
+
+## ⚠️ STRICT CoVe VERIFICATION (AFTER EACH FILE)
+
+### Step G: Run CoVe on This File
+
+```bash
+node scripts/verify.js file <filepath>
+```
+
+Example:
+```bash
+node scripts/verify.js file src/pages/login.page.ts
+```
+
+### Step H: Check CoVe Result
+
+**IF CoVe PASSES (exit code 0):**
+```
+   ✅ CoVe PASSED: <filename>
+   
+   Checks:
+   ├─ No Java Syntax: ✓
+   ├─ Page Structure: ✓
+   ├─ Count Match: ✓
+   ├─ Implementation: ✓
+   └─ Syntax: ✓
+```
+→ Go to Step J (Update Progress)
+
+**IF CoVe FAILS (exit code 1):**
+```
+   ❌ CoVe FAILED: <filename>
+   
+   Checks:
+   ├─ No Java Syntax: ✗
+   │  └─ ❌ Selenium: .sendKeys() → use .fill()
+   ├─ Count Match: ✗
+   │  └─ ❌ Methods: Expected 6, Found 4 (2 MISSING)
+   └─ ...
+```
+→ Go to Step I (Fix and Re-verify)
+
+### Step I: FIX AND RE-VERIFY (if CoVe failed)
+
+**DO NOT MOVE TO NEXT FILE. FIX THIS FILE FIRST.**
+
+1. **Read the CoVe errors carefully**
+2. **Fix each error:**
+   - Java syntax found → Convert to Playwright equivalent
+   - Missing methods → Find and convert the missing methods
+   - Missing locators → Add missing locator definitions
+   - Missing await → Add await keyword
+   - Unbalanced braces → Fix syntax
+
+3. **Save the fixed file**
+
+4. **Re-run CoVe:**
+```bash
+node scripts/verify.js file <filepath>
+```
+
+5. **Repeat until CoVe PASSES**
+
+```
+   🔄 RETRY [1]: Fixing .sendKeys() → .fill()
+   🔄 RETRY [2]: Adding missing method getBalance()
+   ✅ CoVe PASSED on retry 2
+```
+
+**ONLY AFTER CoVe PASSES, proceed to Step J.**
+
+---
+
+### Step J: Update Progress
 
 Add filename to `completedFiles` in `migration-progress.json`.
 
-### Step I: Report File Done
+### Step K: Report File Done
 
 ```
+═══════════════════════════════════════════════════════════════
    ✅ FILE COMPLETE: <filename>
+   ─────────────────────────────────────────
    Methods converted: 4/4
+   CoVe: PASSED
+═══════════════════════════════════════════════════════════════
 ```
 
-### Step J: Next File
+### Step L: Next File
 
 ```
 ═══════════════════════════════════════════════════════════════
@@ -183,6 +231,28 @@ Add filename to `completedFiles` in `migration-progress.json`.
 ```
 
 Go back to Step B with next file.
+
+---
+
+## CoVe CHECKS (What verify.js checks)
+
+### For Pages:
+| Check | What it verifies |
+|-------|------------------|
+| No Java Syntax | No Selenium/WebDriver/sendKeys/getText |
+| Page Structure | export class, constructor(page), Page import |
+| Count Match | Locators & Methods count matches Java source |
+| Implementation | No `throw new Error` remaining |
+| Syntax | Balanced braces, await present |
+
+### For Steps:
+| Check | What it verifies |
+|-------|------------------|
+| No Java Syntax | No @Given/@When/@Then annotations |
+| Step Structure | imports from fixtures, async callbacks |
+| Count Match | Step definition count matches Java source |
+| Implementation | No `throw new Error` remaining |
+| Syntax | Balanced braces, await present |
 
 ---
 
@@ -222,13 +292,14 @@ Show completed vs total.
 
 ## ON "verify"
 
+Run full verification on all files:
 ```bash
 node scripts/verify.js
 ```
 
 ---
 
-## EXAMPLE SESSION
+## EXAMPLE SESSION WITH CoVe
 
 ```
 ═══════════════════════════════════════════════════════════════
@@ -267,7 +338,27 @@ node scripts/verify.js
 
    ✅ Method 2 done
 
-   ✅ FILE COMPLETE: login.page.ts (2 methods)
+   ─────────────────────────────────────────
+   🔍 Running CoVe: login.page.ts
+   ─────────────────────────────────────────
+
+   $ node scripts/verify.js file src/pages/login.page.ts
+
+   📄 login.page.ts
+      ├─ No Java Syntax: ✓
+      ├─ Page Structure: ✓
+      ├─ Count Match: ✓
+      │  └─ ℹ️  Found: 5 locator(s), 2 method(s)
+      ├─ Implementation: ✓
+      └─ Syntax: ✓
+      └─ ✅ PASSED
+
+═══════════════════════════════════════════════════════════════
+   ✅ FILE COMPLETE: login.page.ts
+   ─────────────────────────────────────────
+   Methods converted: 2/2
+   CoVe: PASSED
+═══════════════════════════════════════════════════════════════
 
 ═══════════════════════════════════════════════════════════════
    FILE [2/3]: account.page.ts
@@ -275,10 +366,46 @@ node scripts/verify.js
 
    Methods to convert:
    1. getBalance()
+   2. transferFunds(amount, account)
+
+   ... (converts methods) ...
 
    ─────────────────────────────────────────
-   METHOD [1/1]: getBalance()
+   🔍 Running CoVe: account.page.ts
    ─────────────────────────────────────────
 
-   ... (continues)
+   $ node scripts/verify.js file src/pages/account.page.ts
+
+   📄 account.page.ts
+      ├─ No Java Syntax: ✗
+      │  └─ ❌ Selenium: .sendKeys() → use .fill() (line 45)
+      ├─ Count Match: ✗
+      │  └─ ❌ Methods: Expected 3, Found 2 (1 MISSING)
+      └─ ❌ FAILED (2 errors)
+
+   ─────────────────────────────────────────
+   ⚠️ CoVe FAILED - FIXING BEFORE NEXT FILE
+   ─────────────────────────────────────────
+
+   🔄 RETRY [1]: 
+      - Fixing .sendKeys() → .fill() on line 45
+      - Finding missing method: withdrawFunds()
+
+   ... (fixes and saves) ...
+
+   $ node scripts/verify.js file src/pages/account.page.ts
+
+   📄 account.page.ts
+      ├─ No Java Syntax: ✓
+      ├─ Count Match: ✓
+      └─ ✅ PASSED
+
+═══════════════════════════════════════════════════════════════
+   ✅ FILE COMPLETE: account.page.ts
+   ─────────────────────────────────────────
+   Methods converted: 3/3
+   CoVe: PASSED (after 1 retry)
+═══════════════════════════════════════════════════════════════
+
+   ... (continues to next file) ...
 ```

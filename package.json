@@ -5,6 +5,7 @@
   "scripts": {
     "migrate": "node scripts/migrate.js",
     "migrate:status": "node scripts/migrate.js status",
+    "migrate:force": "node scripts/migrate.js force",
     
     "verify": "node scripts/verify.js",
     "verify:file": "node scripts/verify.js file",

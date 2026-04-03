@@ -747,6 +747,7 @@ Usage:
   npm run migrate          - Run full migration (create skeletons)
   npm run migrate:status   - Show migration status
   npm run migrate:help     - Show this help
+  npm run migrate:force    - Force re-run (DANGEROUS: overwrites existing files)
 
 This script:
   1. Reads Java files from _source-java/
@@ -755,11 +756,58 @@ This script:
   4. Generates pending-methods.json for tracking
 
 After running, use @pw-orchestrator to implement the TODO methods.
+
+SAFETY: This script will NOT overwrite existing .ts files unless --force is used.
 `);
+}
+
+function checkExistingFiles() {
+  const existingPages = getAllFiles(CONFIG.pagesOut, '.page.ts');
+  const existingSteps = getAllFiles(CONFIG.stepsOut, '.steps.ts');
+  
+  if (existingPages.length > 0 || existingSteps.length > 0) {
+    console.log('\n═══════════════════════════════════════════════════════════════');
+    console.log('   ⚠️  WARNING: EXISTING FILES DETECTED');
+    console.log('═══════════════════════════════════════════════════════════════\n');
+    
+    if (existingPages.length > 0) {
+      console.log(`   📄 ${existingPages.length} page file(s) already exist:`);
+      existingPages.slice(0, 5).forEach(f => console.log(`      - ${path.basename(f)}`));
+      if (existingPages.length > 5) console.log(`      ... and ${existingPages.length - 5} more`);
+    }
+    
+    if (existingSteps.length > 0) {
+      console.log(`   📝 ${existingSteps.length} step file(s) already exist:`);
+      existingSteps.slice(0, 5).forEach(f => console.log(`      - ${path.basename(f)}`));
+      if (existingSteps.length > 5) console.log(`      ... and ${existingSteps.length - 5} more`);
+    }
+    
+    console.log('\n   Running migrate.js will OVERWRITE these files!');
+    console.log('\n   Options:');
+    console.log('     1. Use @pw-orchestrator resume  - Continue from where you left off');
+    console.log('     2. npm run migrate:force        - Force overwrite (DANGEROUS)');
+    console.log('\n═══════════════════════════════════════════════════════════════\n');
+    
+    return true; // Files exist
+  }
+  
+  return false; // No existing files
 }
 
 // CLI
 const cmd = process.argv[2];
 if (cmd === 'status') showStatus();
 else if (cmd === 'help') showHelp();
-else runMigration();
+else if (cmd === 'force') {
+  console.log('\n⚠️  FORCE MODE: Overwriting existing files...\n');
+  runMigration();
+}
+else {
+  // Safety check before running
+  if (checkExistingFiles()) {
+    console.log('Migration aborted. Use --force to overwrite or resume to continue.\n');
+    process.exit(1);
+  } else {
+    runMigration();
+  }
+}

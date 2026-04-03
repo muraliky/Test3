@@ -5,7 +5,13 @@ description: Selenium to Playwright migration. Converts ONE file at a time, ONE 
 
 # ORCHESTRATOR AGENT
 
-## CRITICAL RULES
+## ⛔ CRITICAL SAFETY RULES
+
+1. **NEVER RE-RUN migrate.js** - Only run it ONCE at the very start
+2. **If migrate.js already ran** - Use `resume` or read `pending-methods.json` directly
+3. **If files exist in src/pages or src/steps** - DO NOT run migrate.js (it will warn and abort)
+
+## CRITICAL WORKFLOW RULES
 
 1. **ONE FILE AT A TIME** - Never work on multiple files simultaneously
 2. **ONE METHOD AT A TIME** - Convert each method individually, show before/after
@@ -18,29 +24,52 @@ description: Selenium to Playwright migration. Converts ONE file at a time, ONE 
 
 ## ON "start"
 
-### 1. Generate Skeletons
+### 1. Check if Migration Already Started
+
+```bash
+cat migration-progress.json 2>/dev/null || echo "not found"
+```
+
+**IF migration-progress.json EXISTS:**
+```
+⚠️ Migration already in progress!
+Use: @pw-orchestrator resume
+```
+→ DO NOT run migrate.js. Use `resume` instead.
+
+**IF migration-progress.json DOES NOT EXIST:**
+→ Continue to step 2.
+
+### 2. Generate Skeletons (ONLY ONCE)
 
 ```bash
 node scripts/migrate.js
 ```
 
-### 2. Get File List
+**If it shows "EXISTING FILES DETECTED" warning:**
+```
+⚠️ Files already exist. DO NOT force overwrite.
+Use: @pw-orchestrator resume
+```
+
+### 3. Get File List
 
 ```bash
 cat pending-methods.json
 ```
 
-### 3. Create Progress File
+### 4. Create Progress File
 
 Create `migration-progress.json`:
 ```json
 {
   "completedFiles": [],
-  "totalFiles": <count>
+  "totalFiles": <count>,
+  "startedAt": "<timestamp>"
 }
 ```
 
-### 4. Process First File
+### 5. Process First File
 
 Pick FIRST file from `pageFiles` array. Go to **FILE PROCESSING** section below.
 
@@ -54,13 +83,39 @@ Pick FIRST file from `pageFiles` array. Go to **FILE PROCESSING** section below.
 cat migration-progress.json
 ```
 
-### 2. Find Next File
+**IF NOT FOUND:** Tell user to run `@pw-orchestrator start` first.
 
-Compare `completedFiles` with files in `pending-methods.json`. Find first file NOT in `completedFiles`.
+### 2. Read Pending Methods
 
-### 3. Continue
+```bash
+cat pending-methods.json
+```
+
+### 3. Find Next File
+
+Compare `completedFiles` with all files in `pending-methods.json`:
+- First check `pageFiles` array
+- Then check `stepFiles` array
+
+Find first file NOT in `completedFiles`.
+
+### 4. Continue
 
 Go to **FILE PROCESSING** section below with that file.
+
+---
+
+## ON "status"
+
+```bash
+cat migration-progress.json
+cat pending-methods.json | head -50
+```
+
+Show:
+- Completed files count
+- Remaining files count
+- Current file (if any)
 
 ---
 

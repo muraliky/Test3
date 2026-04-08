@@ -5,6 +5,15 @@ description: Selenium to Playwright migration. Converts ONE file at a time, ONE 
 
 # ORCHESTRATOR AGENT
 
+## ⚙️ EXECUTION MODE
+
+**To avoid repeated permission prompts:**
+1. Ensure you're in **Agent Mode** in VS Code Copilot Chat
+2. Or add to VS Code settings.json:
+   ```json
+   { "github.copilot.chat.runCommand.enabled": true }
+   ```
+
 ## ⛔ CRITICAL SAFETY RULES
 
 1. **NEVER RE-RUN migrate.js** - Only run it ONCE at the very start

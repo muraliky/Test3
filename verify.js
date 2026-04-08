@@ -464,6 +464,127 @@ function checkImplementation(content, fileType) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// BOILERPLATE/PLACEHOLDER DETECTION
+// ═══════════════════════════════════════════════════════════════
+
+function checkBoilerplate(content, fileType) {
+  const issues = [];
+  
+  // Extract step/method bodies for analysis
+  const bodies = extractBodies(content, fileType);
+  let boilerplateOnlyCount = 0;
+  const boilerplateSteps = [];
+  
+  for (const item of bodies) {
+    if (isBoilerplateOnly(item.body)) {
+      boilerplateOnlyCount++;
+      boilerplateSteps.push(item.name);
+    }
+  }
+  
+  if (boilerplateOnlyCount > 0) {
+    const examples = boilerplateSteps.slice(0, 3).join(', ');
+    issues.push({
+      severity: 'error',
+      message: `${boilerplateOnlyCount} step(s)/method(s) have ONLY boilerplate code: ${examples}${boilerplateSteps.length > 3 ? '...' : ''}`
+    });
+  }
+  
+  // Check for empty bodies
+  let emptyCount = 0;
+  for (const item of bodies) {
+    const cleaned = item.body.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '').trim();
+    if (!cleaned || cleaned === '{}') {
+      emptyCount++;
+    }
+  }
+  
+  if (emptyCount > 0) {
+    issues.push({
+      severity: 'error',
+      message: `${emptyCount} empty step(s)/method(s) - no implementation`
+    });
+  }
+  
+  return issues;
+}
+
+/**
+ * Extract step/method bodies for analysis
+ */
+function extractBodies(content, fileType) {
+  const bodies = [];
+  
+  if (fileType === 'step') {
+    // Extract step definition bodies
+    const stepRegex = /(Given|When|Then)\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*async\s*\([^)]*\)\s*=>\s*\{([\s\S]*?)\}\s*\)/g;
+    let match;
+    while ((match = stepRegex.exec(content))) {
+      bodies.push({ 
+        name: match[2].substring(0, 40) + (match[2].length > 40 ? '...' : ''),
+        body: match[3].trim() 
+      });
+    }
+  } else {
+    // Extract method bodies for pages
+    const methodRegex = /async\s+(\w+)\s*\([^)]*\)\s*(?::\s*Promise<[^>]+>)?\s*\{([\s\S]*?)\n\s{2}\}/g;
+    let match;
+    while ((match = methodRegex.exec(content))) {
+      bodies.push({ 
+        name: match[1],
+        body: match[2].trim() 
+      });
+    }
+  }
+  
+  return bodies;
+}
+
+/**
+ * Check if a body contains only boilerplate code (no actual implementation)
+ */
+function isBoilerplateOnly(body) {
+  if (!body || body.length === 0) return true;
+  
+  // Remove comments
+  const withoutComments = body
+    .replace(/\/\/.*$/gm, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .trim();
+  
+  if (!withoutComments) return true;
+  
+  // Boilerplate-only patterns (these alone don't constitute real implementation)
+  const boilerplatePatterns = [
+    /^await\s+page\.waitForLoadState\s*\(\s*['"`]\w+['"`]\s*\)\s*;?$/,
+    /^await\s+page\.waitForTimeout\s*\(\s*\d+\s*\)\s*;?$/,
+    /^await\s+page\.waitForSelector\s*\([^)]+\)\s*;?$/,
+    /^await\s+page\.waitForNavigation\s*\([^)]*\)\s*;?$/,
+    /^await\s+page\.waitForURL\s*\([^)]+\)\s*;?$/,
+    /^console\.log\s*\([^)]*\)\s*;?$/,
+    /^await\s+Promise\.resolve\s*\(\s*\)\s*;?$/,
+    /^return\s*;?$/,
+    /^\/\/.*$/,
+    /^\s*$/,
+  ];
+  
+  // Split into statements
+  const statements = withoutComments
+    .split(/;|\n/)
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+  
+  if (statements.length === 0) return true;
+  
+  // Check if ALL statements are boilerplate
+  const allBoilerplate = statements.every(stmt => {
+    return boilerplatePatterns.some(pattern => pattern.test(stmt));
+  });
+  
+  return allBoilerplate;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // STRICT SYNTAX CHECK
 // ═══════════════════════════════════════════════════════════════
 
@@ -567,7 +688,15 @@ function verifyFile(filePath, silent = false) {
     issues: implIssues,
   });
   
-  // Check 5: Syntax
+  // Check 5: Boilerplate Detection
+  const boilerplateIssues = checkBoilerplate(content, fileType);
+  checks.push({
+    name: 'No Boilerplate',
+    passed: !boilerplateIssues.some(i => i.severity === 'error'),
+    issues: boilerplateIssues,
+  });
+  
+  // Check 6: Syntax
   const syntaxIssues = checkSyntax(content);
   checks.push({
     name: 'Syntax',
